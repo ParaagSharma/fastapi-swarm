@@ -1,10 +1,9 @@
 api:
   insecure: true
   dashboard: true
-  
+
 providers:
-  docker:
-    swarmMode: true
+  swarm:
     network: my-net
     exposedbydefault: false
 
