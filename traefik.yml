@@ -1,0 +1,21 @@
+api:
+  insecure: true
+  dashboard: true
+  
+providers:
+  docker:
+    swarmMode: true
+    network: my-net
+    exposedbydefault: false
+
+# accessLog: {}
+
+log:
+  level: DEBUG
+
+entryPoints:
+  web:
+    address: :80
+
+  websecure:
+    address: :443

@@ -1,0 +1,78 @@
+version: '3.9'
+
+services:
+  traefik:
+    image: traefik:v2.10.7
+    deploy:
+      mode: global
+    networks:
+      - my-net
+    ports:
+      - target: 80
+        published: 3000
+        protocol: tcp
+        mode: host
+      - target: 8080
+        published: 8080
+        protocol: tcp
+        mode: host
+    volumes:
+      - ./traefik.yml:/etc/traefik/traefik.yml
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+  web:
+    image: paraag01/test:latest
+    environment:
+      - POSTGRES_HOST=db
+      - POSTGRES_USER=test
+      - POSTGRES_PASSWORD=test
+      - POSTGRES_DB=fast_todo_app
+      - POSTGRES_PORT=5432
+    volumes:
+      - ./app:/app/app
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+      update_config:
+        parallelism: 1
+        delay: 15s
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.web.service=web-service"
+        - "traefik.http.routers.web.entryPoints=web"
+        - "traefik.http.routers.web.rule=PathPrefix(`/`)"
+        - "traefik.http.services.web-service.loadBalancer.server.port=8011"
+    depends_on:
+      - db
+    networks:
+      - my-net
+    command: ["/bin/sh", "-c", "chmod +x /app/app/wait-for-it.sh && /app/app/wait-for-it.sh"]
+
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=test
+      - POSTGRES_PASSWORD=test
+      - POSTGRES_DB=fast_todo_app
+    # ports:
+    #   - target: 5432
+    #     published: 5432
+    #     protocol: tcp
+    #     mode: host
+    networks:
+      - my-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test -d fast_todo_app"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+
+networks:
+  my-net:
+    driver: overlay
